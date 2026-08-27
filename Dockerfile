@@ -9,7 +9,8 @@ ENV NODE_ENV=production \
     PORT=3000 \
     INTERNAL_DIAG_PORT=8080 \
     FLAG_DIR=/opt/vaultgate/secrets \
-    ENABLE_SSH=false
+    ENABLE_SSH=false \
+    VAULTBOT_MODEL=laguna-s-2.1-free
 
 # Runtime tools:
 #   bash            — reverse-shell payloads use bash /dev/tcp
