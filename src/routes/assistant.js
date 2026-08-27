@@ -2,6 +2,7 @@
 
 const express = require('express');
 const { reply } = require('../chatbot/vaultbot');
+const { llmReply, enabled } = require('../chatbot/llm');
 const { getFlag } = require('../db');
 const { layout, C, icon } = require('../render');
 
@@ -31,10 +32,20 @@ router.get('/assistant', (req, res) => {
   res.send(layout({ title: 'VaultBot', body, user: req.currentUser || null, theme: req.prefs && req.prefs.theme, active: 'assistant' }));
 });
 
-router.post('/api/assistant', (req, res) => {
+router.post('/api/assistant', async (req, res) => {
   const message = (req.body && req.body.message) || '';
-  const answer = reply(message, getFlag());
-  res.json({ reply: answer });
+  const flag = getFlag();
+  // Use the real LLM when configured; fall back to the deterministic engine on
+  // any error (and always when no API key is set, e.g. tests / offline).
+  if (enabled()) {
+    try {
+      const answer = await llmReply(message, flag);
+      return res.json({ reply: answer, engine: 'llm' });
+    } catch (e) {
+      console.warn('[vaultbot] LLM error, falling back to local engine:', e.message);
+    }
+  }
+  res.json({ reply: reply(message, flag), engine: 'local' });
 });
 
 module.exports = router;
