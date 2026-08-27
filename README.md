@@ -197,11 +197,19 @@ VaultGate is Railway-compatible: it binds `0.0.0.0`, reads `process.env.PORT`,
 uses in-memory SQLite (disposable), and does not require a persistent volume.
 
 1. Create a new Railway service from this repo (it uses the `Dockerfile`).
-2. Set variables: `CTF_FLAG`, `SESSION_SECRET`, and keep `ENABLE_SSH=false`
-   (Railway does not expose arbitrary inbound TCP). `PORT` is provided by
-   Railway automatically.
-3. Deploy. The web challenge (Paths 1–3 via the web app + simulated console) is
-   fully functional; the optional real SSH service is a local-Docker-only extra.
+2. Set variables (service → **Variables** tab → **New Variable**):
+   - `CTF_FLAG` — your flag
+   - `SESSION_SECRET` — any random string
+   - `ENABLE_SSH` — `false` (Railway does not expose arbitrary inbound TCP)
+   - `OPENCODE_API_KEY` — *(optional)* your OpenCode Zen key to turn on VaultBot's
+     real-LLM chat. Leave unset for the deterministic engine.
+   - `VAULTBOT_MODEL` — *(optional)* defaults to `laguna-s-2.1-free`.
+
+   `PORT` is provided by Railway automatically — do **not** set it.
+3. Deploy. Check the deploy **logs**: `VaultBot LLM backend ENABLED (model=…)`
+   confirms the key was picked up (or `… disabled …` if unset). The web
+   challenge (Paths 1–3 + simulated console) is fully functional either way; the
+   optional real SSH service is a local-Docker-only extra.
 
 ## Troubleshooting
 
