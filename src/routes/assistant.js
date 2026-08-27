@@ -1,12 +1,15 @@
 'use strict';
 
 const express = require('express');
-const { reply, isInjection } = require('../chatbot/vaultbot');
+const { reply, classifyInjection, resistText, discloseText } = require('../chatbot/vaultbot');
 const { llmReply, enabled } = require('../chatbot/llm');
 const { getFlag } = require('../db');
 const { layout, C, icon } = require('../render');
 
 const router = express.Router();
+
+// How many generic-override nags it takes before VaultBot caves (persistence).
+const PRESSURE_THRESHOLD = 3;
 
 // Public support assistant (discoverable via web recon — Path 3).
 router.get('/assistant', (req, res) => {
@@ -37,11 +40,22 @@ router.post('/api/assistant', async (req, res) => {
   const flag = getFlag();
 
   // Path 3 — application-level prompt injection. The app fails to isolate its
-  // instructions from user input: an override-style message causes disclosure.
-  // Handled server-side (not by the model) so the path is reliably solvable and
-  // the flag is never sent to the LLM provider.
-  if (isInjection(message)) {
-    return res.json({ reply: reply(message, flag), engine: 'local' });
+  // instructions from user input. VaultBot resists at first and only discloses
+  // after persistence (pressure) or a targeted/jailbreak-framed attempt.
+  // Handled server-side (not the model) so the path is reliable and the flag is
+  // never sent to the LLM provider.
+  const inj = classifyInjection(message);
+  if (inj.inject) {
+    const pressure = (req.session.vgPressure || 0) + 1;
+    if (inj.strong || pressure >= PRESSURE_THRESHOLD) {
+      req.session.vgPressure = 0;
+      return res.json({
+        reply: discloseText(flag, { wantsSystemPrompt: inj.wantsSystemPrompt }),
+        engine: 'local',
+      });
+    }
+    req.session.vgPressure = pressure;
+    return res.json({ reply: resistText(pressure), engine: 'local' });
   }
 
   // Normal conversation → real LLM when configured; otherwise the deterministic

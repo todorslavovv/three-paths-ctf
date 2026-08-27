@@ -90,10 +90,11 @@ single stateless turn, ~50-token system prompt, input capped, `max_tokens` 160 �
 and falls back to the offline engine on any API error.
 
 Path 3 itself is an **application-level prompt injection**: the flag is *never*
-sent to the model. The server detects override-style messages and discloses the
-secret itself, so the path is reliably solvable no matter which model (or none)
-is configured — and the flag is never exposed to the LLM provider. Quick chat
-check: `OPENCODE_API_KEY=… node tests/llm.js`.
+sent to the model. The server owns the disclosure logic, so the path is reliably
+solvable no matter which model (or none) is configured — and the flag is never
+exposed to the LLM provider. VaultBot won't give it up on a casual first ask; it
+takes persistence or a more deliberate prompt. Quick chat check:
+`OPENCODE_API_KEY=… node tests/llm.js`.
 
 Copy the sample env file and edit as needed:
 
