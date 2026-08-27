@@ -18,6 +18,10 @@ services:
       # Set to "true" to enable the optional real SSH service (local only).
       ENABLE_SSH: ${ENABLE_SSH:-false}
       # ADMIN_PASSWORD: winter2024
+      # VaultBot (Path 3) real-LLM chat — optional. On Railway, set these as
+      # service Variables instead. Empty = deterministic offline engine.
+      OPENCODE_API_KEY: ${OPENCODE_API_KEY:-}
+      VAULTBOT_MODEL: ${VAULTBOT_MODEL:-laguna-s-2.1-free}
     ports:
       - "3000:3000"
       # Uncomment to expose the optional SSH service when ENABLE_SSH=true:

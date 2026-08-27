@@ -35,6 +35,11 @@ app.listen(PORT, HOST, () => {
   console.log(`VaultGate listening on http://${HOST}:${PORT}`);
   console.log(`[boot] internal diagnostics port: ${process.env.INTERNAL_DIAG_PORT} (loopback only)`);
   console.log(`[boot] flag loaded from CTF_FLAG (len=${(getFlag() || '').length}), on-disk copy: ${flagPath}`);
+  if (process.env.OPENCODE_API_KEY) {
+    console.log(`[boot] VaultBot LLM backend ENABLED (model=${process.env.VAULTBOT_MODEL || 'laguna-s-2.1-free'}).`);
+  } else {
+    console.log('[boot] VaultBot LLM backend disabled (OPENCODE_API_KEY not set) — using deterministic engine.');
+  }
   if (process.env.ENABLE_SSH === 'true') {
     console.log('[boot] ENABLE_SSH=true — container SSH service expected (see Dockerfile).');
   }
