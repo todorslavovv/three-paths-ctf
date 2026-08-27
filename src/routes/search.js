@@ -2,7 +2,7 @@
 
 const express = require('express');
 const { db } = require('../db');
-const { layout, esc } = require('../render');
+const { layout, esc, C, icon } = require('../render');
 
 const router = express.Router();
 
@@ -39,32 +39,45 @@ router.get('/search', (req, res) => {
 
   let results = '';
   if (error) {
-    results = `<div class="alert">SQL error: ${esc(error)}</div>`;
+    results = `<div class="${C.alert}">${icon('bug_report', 'text-lg')}<span>SQL error: ${esc(error)}</span></div>`;
   } else if (rows) {
     if (rows.length === 0) {
-      results = `<p class="muted">No documents matched <code>${esc(q)}</code>.</p>`;
+      results = `<p class="${C.muted}">No documents matched <code class="text-primary">${esc(q)}</code>.</p>`;
     } else {
-      results =
-        `<table class="tbl"><thead><tr><th>Title</th><th>Department</th><th>Classification</th></tr></thead><tbody>` +
-        rows
-          .map(
-            (r) =>
-              `<tr><td>${esc(r.title)}</td><td>${esc(r.department)}</td><td>${esc(r.classification)}</td></tr>`
-          )
-          .join('') +
-        `</tbody></table>`;
+      results = `
+      <div class="border border-surface-border rounded-lg overflow-hidden">
+        <table class="${C.table}">
+          <thead><tr class="bg-surface-container-high text-outline font-label-sm-mono text-label-sm-mono uppercase tracking-widest">
+            <th class="px-4 py-3">Title</th><th class="px-4 py-3">Department</th><th class="px-4 py-3">Classification</th>
+          </tr></thead>
+          <tbody>${rows
+            .map(
+              (r) => `<tr class="border-t border-surface-border/60">
+              <td class="px-4 py-3 text-on-surface">${esc(r.title)}</td>
+              <td class="px-4 py-3 text-on-surface-variant">${esc(r.department)}</td>
+              <td class="px-4 py-3 text-on-surface-variant">${esc(r.classification)}</td></tr>`
+            )
+            .join('')}</tbody>
+        </table>
+      </div>`;
     }
   }
 
-  const user = req.currentUser || null;
   const body = `
-  <h1>Search documents</h1>
-  <form method="get" action="/search" class="searchbar">
-    <input name="q" value="${esc(q || '')}" placeholder="Search document titles…" autofocus>
-    <button class="btn" type="submit">Search</button>
+  <div>
+    <h1 class="${C.h1}">Search documents</h1>
+    <p class="${C.muted} mt-1">Query the document archive by title.</p>
+  </div>
+  <form method="get" action="/search" class="flex gap-3">
+    <div class="relative flex-1">
+      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+      <input name="q" value="${esc(q || '')}" placeholder="Search document titles…" autofocus
+        class="${C.input} pl-11">
+    </div>
+    <button class="${C.btn}" type="submit">Search</button>
   </form>
   ${results}`;
-  res.send(layout({ title: 'Search', body, user, theme: req.prefs && req.prefs.theme }));
+  res.send(layout({ title: 'Search', body, user: req.currentUser || null, theme: req.prefs && req.prefs.theme, active: 'search' }));
 });
 
 module.exports = router;
