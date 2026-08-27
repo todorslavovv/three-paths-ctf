@@ -1,0 +1,27 @@
+# VaultGate — local Docker lab.
+#
+# Reverse-shell note: to catch a shell on your host from inside the container,
+# use the host alias `host.docker.internal` as your attacker IP (mapped below
+# via host-gateway), or run `ip route | awk '/default/{print $3}'` inside the
+# container to find the gateway.
+services:
+  vaultgate:
+    build: .
+    image: vaultgate:latest
+    container_name: vaultgate
+    environment:
+      # Override the flag here or via a .env file. Never commit a real flag.
+      CTF_FLAG: ${CTF_FLAG:-CTF{vaultgate_three_paths_one_flag}}
+      PORT: 3000
+      INTERNAL_DIAG_PORT: 8080
+      SESSION_SECRET: ${SESSION_SECRET:-change-me}
+      # Set to "true" to enable the optional real SSH service (local only).
+      ENABLE_SSH: ${ENABLE_SSH:-false}
+      # ADMIN_PASSWORD: winter2024
+    ports:
+      - "3000:3000"
+      # Uncomment to expose the optional SSH service when ENABLE_SSH=true:
+      # - "2222:22"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
