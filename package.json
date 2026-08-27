@@ -1,0 +1,20 @@
+{
+  "name": "vaultgate",
+  "version": "1.0.0",
+  "private": true,
+  "description": "VaultGate — intentionally vulnerable document-management CTF",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node tests/smoke.js",
+    "test:exploits": "node tests/exploits.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "node-serialize": "0.0.4"
+  }
+}

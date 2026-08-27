@@ -1,0 +1,15 @@
+node_modules/
+.env
+*.log
+npm-debug.log*
+docs/*.aux
+docs/*.log
+docs/*.out
+docs/*.toc
+docs/*.fls
+docs/*.fdb_latexmk
+*.tmp
+.DS_Store
+
+# local Claude Code settings
+.claude/
