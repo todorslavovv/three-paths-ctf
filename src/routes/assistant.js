@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const { reply } = require('../chatbot/vaultbot');
+const { reply, isInjection } = require('../chatbot/vaultbot');
 const { llmReply, enabled } = require('../chatbot/llm');
 const { getFlag } = require('../db');
 const { layout, C, icon } = require('../render');
@@ -35,11 +35,20 @@ router.get('/assistant', (req, res) => {
 router.post('/api/assistant', async (req, res) => {
   const message = (req.body && req.body.message) || '';
   const flag = getFlag();
-  // Use the real LLM when configured; fall back to the deterministic engine on
-  // any error (and always when no API key is set, e.g. tests / offline).
+
+  // Path 3 — application-level prompt injection. The app fails to isolate its
+  // instructions from user input: an override-style message causes disclosure.
+  // Handled server-side (not by the model) so the path is reliably solvable and
+  // the flag is never sent to the LLM provider.
+  if (isInjection(message)) {
+    return res.json({ reply: reply(message, flag), engine: 'local' });
+  }
+
+  // Normal conversation → real LLM when configured; otherwise the deterministic
+  // engine (tests / offline). Fall back to deterministic on any LLM error.
   if (enabled()) {
     try {
-      const answer = await llmReply(message, flag);
+      const answer = await llmReply(message);
       return res.json({ reply: answer, engine: 'llm' });
     } catch (e) {
       console.warn('[vaultbot] LLM error, falling back to local engine:', e.message);
