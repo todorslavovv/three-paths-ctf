@@ -5,7 +5,7 @@
 
   function add(text, who) {
     var el = document.createElement('div');
-    el.className = 'm ' + who;
+    el.className = 'vg-msg ' + who;
     el.textContent = text;
     chat.appendChild(el);
     chat.scrollTop = chat.scrollHeight;

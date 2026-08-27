@@ -3,24 +3,51 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { db } = require('../db');
-const { layout, esc } = require('../render');
+const { layout, esc, C, icon } = require('../render');
 
 const router = express.Router();
 
-function loginPage(req, error, username) {
-  const body = `
-  <div class="auth-card">
-    <h1>Sign in to VaultGate</h1>
-    <p class="muted">Use your corporate account.</p>
-    ${error ? `<div class="alert">${esc(error)}</div>` : ''}
-    <form method="post" action="/login" class="form">
-      <label>Username<input name="username" autocomplete="username" value="${esc(username || '')}" required></label>
-      <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
-      <button class="btn" type="submit">Sign in</button>
-    </form>
-    <p class="muted small">No account? <a href="/register">Register</a></p>
+function authShell(title, subtitle, inner) {
+  return `
+  <div class="w-full max-w-md mx-auto">
+    <div class="relative bg-surface-container-low border border-surface-border rounded-lg p-8 overflow-hidden">
+      <div class="absolute top-0 left-0 w-full h-[2px] bg-primary/20"></div>
+      <div class="absolute top-0 left-0 w-1/3 h-[2px] bg-primary"></div>
+      <div class="flex items-center gap-3 mb-1 text-primary">${icon('lock', 'text-2xl')}
+        <h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">${title}</h1></div>
+      <p class="font-label-sm-mono text-label-sm-mono text-outline uppercase tracking-widest mb-6">${subtitle}</p>
+      ${inner}
+    </div>
   </div>`;
-  return layout({ title: 'Sign in', body, user: null, theme: req.prefs && req.prefs.theme });
+}
+
+function field(label, name, type, value, autocomplete) {
+  return `<label class="block">
+    <span class="${C.label}">${label}</span>
+    <input class="${C.input}" name="${name}" type="${type || 'text'}"${autocomplete ? ` autocomplete="${autocomplete}"` : ''} value="${esc(value || '')}" required>
+  </label>`;
+}
+
+function loginPage(req, error, username) {
+  const alert = error
+    ? `<div class="${C.alert} mb-5">${icon('error', 'text-lg')}<span>${esc(error)}</span></div>`
+    : '';
+  const inner = `
+    ${alert}
+    <form method="post" action="/login" class="flex flex-col gap-4">
+      ${field('Username', 'username', 'text', username, 'username')}
+      ${field('Password', 'password', 'password', '', 'current-password')}
+      <button class="${C.btn} w-full mt-2" type="submit">${icon('login')} Sign in</button>
+    </form>
+    <p class="font-label-sm-mono text-label-sm-mono text-outline mt-6 text-center">No account?
+      <a href="/register" class="text-primary hover:underline">Register</a></p>`;
+  return layout({
+    title: 'Sign in',
+    body: authShell('Sign in to VaultGate', 'Authorized personnel only', inner),
+    user: null,
+    theme: req.prefs && req.prefs.theme,
+    active: null,
+  });
 }
 
 router.get('/login', (req, res) => {
@@ -52,19 +79,23 @@ router.post('/login', (req, res) => {
 });
 
 router.get('/register', (req, res) => {
-  const body = `
-  <div class="auth-card">
-    <h1>Create an account</h1>
-    <form method="post" action="/register" class="form">
-      <label>Username<input name="username" required></label>
-      <label>Display name<input name="display_name" required></label>
-      <label>Email<input name="email" type="email" required></label>
-      <label>Password<input name="password" type="password" required></label>
-      <button class="btn" type="submit">Register</button>
+  const inner = `
+    <form method="post" action="/register" class="flex flex-col gap-4">
+      ${field('Username', 'username', 'text', '', 'username')}
+      ${field('Display name', 'display_name', 'text', '')}
+      ${field('Email', 'email', 'email', '', 'email')}
+      ${field('Password', 'password', 'password', '', 'new-password')}
+      <button class="${C.btn} w-full mt-2" type="submit">${icon('person_add')} Register</button>
     </form>
-    <p class="muted small">Already registered? <a href="/login">Sign in</a></p>
-  </div>`;
-  res.send(layout({ title: 'Register', body, user: null, theme: req.prefs && req.prefs.theme }));
+    <p class="font-label-sm-mono text-label-sm-mono text-outline mt-6 text-center">Already registered?
+      <a href="/login" class="text-primary hover:underline">Sign in</a></p>`;
+  res.send(layout({
+    title: 'Register',
+    body: authShell('Create an account', 'New personnel registration', inner),
+    user: null,
+    theme: req.prefs && req.prefs.theme,
+    active: null,
+  }));
 });
 
 router.post('/register', (req, res) => {
@@ -74,10 +105,11 @@ router.post('/register', (req, res) => {
   }
   const exists = db.prepare('SELECT id FROM users WHERE username = ?').get(String(username));
   if (exists) {
-    const body = `<div class="auth-card"><h1>Create an account</h1>
-      <div class="alert">That username is already taken.</div>
-      <p><a href="/register">Try again</a></p></div>`;
-    return res.status(409).send(layout({ title: 'Register', body, user: null, theme: req.prefs && req.prefs.theme }));
+    const inner = `<div class="${C.alert} mb-5">${icon('error', 'text-lg')}<span>That username is already taken.</span></div>
+      <a href="/register" class="${C.btnGhost} w-full">Try again</a>`;
+    return res
+      .status(409)
+      .send(layout({ title: 'Register', body: authShell('Create an account', 'New personnel registration', inner), user: null, theme: req.prefs && req.prefs.theme, active: null }));
   }
   const info = db.prepare(
     `INSERT INTO users (username, password_hash, display_name, email, department, role)
