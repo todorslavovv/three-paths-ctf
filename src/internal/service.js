@@ -57,6 +57,11 @@ function startInternalService() {
     res.end('Not found\n');
   });
 
+  // Fail soft: a diagnostics bind failure must not crash the web challenge.
+  server.on('error', (err) => {
+    console.error(`[internal] diagnostics service failed to bind ${INTERNAL_PORT}: ${err.code || err.message} (web app continues)`);
+  });
+
   // Loopback bind — never expose externally.
   server.listen(INTERNAL_PORT, '127.0.0.1', () => {
     console.log(`[internal] diagnostics service on http://127.0.0.1:${INTERNAL_PORT} (loopback only)`);
