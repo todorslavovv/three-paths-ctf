@@ -197,19 +197,23 @@ VaultGate is Railway-compatible: it binds `0.0.0.0`, reads `process.env.PORT`,
 uses in-memory SQLite (disposable), and does not require a persistent volume.
 
 1. Create a new Railway service from this repo (it uses the `Dockerfile`).
-2. Set variables (service → **Variables** tab → **New Variable**):
-   - `CTF_FLAG` — your flag
-   - `SESSION_SECRET` — any random string
-   - `ENABLE_SSH` — `false` (Railway does not expose arbitrary inbound TCP)
-   - `OPENCODE_API_KEY` — *(optional)* your OpenCode Zen key to turn on VaultBot's
-     real-LLM chat. Leave unset for the deterministic engine.
-   - `VAULTBOT_MODEL` — *(optional)* defaults to `laguna-s-2.1-free`.
+2. **No variables are required** — the image ships safe defaults for everything
+   (`PORT` from Railway, `VAULTBOT_MODEL`, `INTERNAL_DIAG_PORT`, `FLAG_DIR`,
+   `ENABLE_SSH=false`, and a default `CTF_FLAG`). It deploys and runs as-is.
 
-   `PORT` is provided by Railway automatically — do **not** set it.
-3. Deploy. Check the deploy **logs**: `VaultBot LLM backend ENABLED (model=…)`
-   confirms the key was picked up (or `… disabled …` if unset). The web
-   challenge (Paths 1–3 + simulated console) is fully functional either way; the
-   optional real SSH service is a local-Docker-only extra.
+   Two **optional, one-time** variables (service → **Variables** → **New Variable**;
+   Railway persists them across all future redeploys, so you add them only once):
+   - `CTF_FLAG` — set your own flag instead of the built-in default.
+   - `OPENCODE_API_KEY` — your OpenCode Zen key to turn on VaultBot's real-LLM
+     chat. Without it, VaultBot uses the deterministic engine and every path
+     still works. (Keep this as a Railway variable — never commit it to a public
+     repo, or it will be scraped and revoked.)
+
+   Do **not** set `PORT` — Railway provides it.
+3. Deploy. The deploy **logs** show `VaultBot LLM backend ENABLED (model=…)` when
+   a key is set (or `… disabled …` otherwise). The web challenge (Paths 1–3 +
+   simulated console) is fully functional either way; the optional real SSH
+   service is a local-Docker-only extra.
 
 ## Troubleshooting
 
