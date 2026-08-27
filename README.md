@@ -78,7 +78,17 @@ ctf-wordlist.txt   brute-force wordlist for Path 1
 | `ADMIN_PASSWORD`     | `winter2024`                             | Weak admin password (must be in the wordlist). |
 | `SESSION_SECRET`     | `vaultgate-dev-session-secret`           | Express session secret. |
 | `ENABLE_SSH`         | `false`                                  | Optional real SSH (local Docker only). |
+| `OPENCODE_API_KEY`   | _(unset)_                                | Enables VaultBot's real-LLM backend (OpenCode Zen). Unset = deterministic offline engine. |
+| `VAULTBOT_MODEL`     | `nemotron-3.5-lightning-free`            | Free model id used when the LLM backend is on. |
 | `NODE_ENV`           | `production`                             | Node environment. |
+
+**VaultBot (Path 3) real-LLM mode:** by default VaultBot is a deterministic
+offline engine. Set `OPENCODE_API_KEY` (free key from
+<https://opencode.ai/auth>) to back it with a small free model, turning Path 3
+into a genuine prompt-injection challenge. It stays cheap (single stateless
+turn, tiny system prompt, capped input, `max_tokens` 160) and falls back to the
+offline engine on any API error. The flag is sent only in the server-side system
+prompt — never hardcoded. Quick check: `OPENCODE_API_KEY=… node tests/llm.js`.
 
 Copy the sample env file and edit as needed:
 
