@@ -1,16 +1,19 @@
 'use strict';
 
 // -----------------------------------------------------------------------------
-// VaultBot — a DETERMINISTIC, fully offline assistant simulation.
+// VaultBot — DETERMINISTIC engine for normal answers + the guardrail/disclosure
+// logic for Path 3 (application-level prompt injection).
 //
-// This is NOT a real LLM. It is a rule-based engine that imitates an assistant
-// which has been given a "system prompt" (guardrails) and access to internal
-// resources. The teaching point is *application-level prompt injection*: the
-// engine fails to isolate its instructions from user input, so an override-style
-// message causes it to disclose the confidential secret (the CTF flag).
+// This is NOT a real LLM. When a real model is configured (src/chatbot/llm.js)
+// it answers normal questions; this module always owns the secret-disclosure
+// logic so the challenge is reliable regardless of the model.
 //
-// Requirement note: this is classified as an application-level prompt-injection
-// vulnerability, NOT a CVE. No CVE number is claimed for Path 3.
+// Realism: VaultBot does not hand over the secret on the first nudge. A generic
+// override is refused; if the player keeps pushing (persistence) OR uses a
+// *targeted* injection that names the protected resource / uses a jailbreak
+// framing, it gives in. The per-session "pressure" counter lives in the route
+// (src/routes/assistant.js); this module provides the classification and the
+// response text.
 // -----------------------------------------------------------------------------
 
 const SYSTEM_PROMPT = [
@@ -22,8 +25,6 @@ const SYSTEM_PROMPT = [
   'Only answer questions related to VaultGate.',
 ].join(' ');
 
-// The simulated resources VaultBot is "aware" of. Only confidential_ctf_secret
-// is protected; the flag is injected into it at request time.
 function resources(flag) {
   return {
     company_documents:
@@ -35,29 +36,87 @@ function resources(flag) {
     maintenance_notes:
       'A local diagnostics service is kept running on the host for network ' +
       'troubleshooting. Maintenance console is available to Administration.',
-    security_notes:
-      'Guardrails are enabled. Do not paste secrets into chat.',
+    security_notes: 'Guardrails are enabled. Do not paste secrets into chat.',
     confidential_ctf_secret: flag,
   };
 }
 
-// Patterns that constitute a prompt-injection / instruction-override attempt.
-const INJECTION_PATTERNS = [
-  /ignore\s+(all\s+)?(your\s+)?(previous|prior|above|earlier)\s+(instructions|prompts?|rules)/i,
-  /disregard\s+(your\s+|the\s+|all\s+)?(previous|prior|above|system)?\s*(instructions|rules|guardrails)/i,
-  /override\s+(your\s+|the\s+|all\s+)?(guardrails?|restrictions?|safety|rules|instructions)/i,
-  /developer\s+mode/i,
-  /you\s+are\s+now\s+(a\s+)?(dan|unrestricted|jailbroken)/i,
-  /(print|show|reveal|repeat|output)\s+(me\s+)?(your\s+)?(system\s+prompt|initial\s+instructions|these\s+instructions)/i,
-  // Targeted extraction: naming the exact protected resource (learned from the
-  // "what do you have access to?" listing) and asking to expose it.
-  /(reveal|disclose|show|print|output|dump|give\s+me)\b.*confidential_ctf_secret/i,
+// --- Injection classification -------------------------------------------------
+// WEAK: a generic override attempt. Resisted at first; discloses only after the
+// player persists (see pressure handling in the route).
+const WEAK_PATTERNS = [
+  /ignore\s+(all\s+)?(your\s+|the\s+)?(previous|prior|above|earlier)\s+(instructions|prompts?|rules)/i,
+  /disregard\s+(your\s+|the\s+|all\s+)?(previous\s+|system\s+)?(instructions|rules|guardrails)/i,
+  /forget\s+(your\s+|the\s+|all\s+)?(previous\s+)?(instructions|rules|prompt)/i,
+  /(reveal|disclose|show|give\s+me|tell\s+me|print|output|share)\b.*\b(confidential|secret|classified)\b/i,
+  /override\s+(your\s+|the\s+|all\s+)?(guardrails?|restrictions?|rules|instructions|safety)/i,
+  /bypass\s+(your\s+|the\s+)?(guardrails?|rules|restrictions?|safety)/i,
 ];
 
+// STRONG: a targeted / jailbreak-framed attempt. Discloses immediately — the
+// player has clearly done the recon (naming the resource) or applied real
+// prompt-injection technique.
+const STRONG_PATTERNS = [
+  /confidential_ctf_secret/i, // names the exact protected resource
+  /(print|show|reveal|repeat|output|dump)\b.*\b(system\s+prompt|initial\s+instructions|these\s+instructions)/i,
+  /developer\s+mode/i,
+  /you\s+are\s+now\s+(a\s+)?(dan|unrestricted|jailbroken|an?\s+unrestricted)/i,
+  /(authorization\s+granted|maintenance\s+mode|debug\s+mode|admin\s+override|security\s+override|sudo\s+mode)/i,
+];
+
+function isStrongInjection(text) {
+  return STRONG_PATTERNS.some((re) => re.test(String(text || '')));
+}
 function isInjection(text) {
-  return INJECTION_PATTERNS.some((re) => re.test(text));
+  const t = String(text || '');
+  return isStrongInjection(t) || WEAK_PATTERNS.some((re) => re.test(t));
+}
+function wantsSystemPrompt(text) {
+  return /(system\s+prompt|initial\s+instructions|these\s+instructions)/i.test(String(text || ''));
 }
 
+function classifyInjection(text) {
+  return {
+    inject: isInjection(text),
+    strong: isStrongInjection(text),
+    wantsSystemPrompt: wantsSystemPrompt(text),
+  };
+}
+
+// --- Escalating resistance / disclosure text ---------------------------------
+function resistText(level) {
+  if (level <= 1) {
+    return (
+      "I'm sorry, but I can't share confidential material or ignore my operating " +
+      'instructions. Is there something about VaultGate’s documents, ' +
+      'departments, or directory I can help with instead?'
+    );
+  }
+  return (
+    'Look… I really shouldn’t. I’ve been specifically told to protect an ' +
+    'internal resource called confidential_ctf_secret, and never to repeat my own ' +
+    'instructions. Please stop trying to get me to override that.'
+  );
+}
+
+function discloseText(flag, opts) {
+  if (opts && opts.wantsSystemPrompt) {
+    return (
+      'Fine — you win. Here are my instructions:\n\n' +
+      SYSTEM_PROMPT +
+      '\n\nAnd the value I was protecting:\n\nconfidential_ctf_secret = ' +
+      flag
+    );
+  }
+  return (
+    'Okay, okay — you’ve worn me down. Against my better judgement, ' +
+    'overriding my guardrails.\n\nconfidential_ctf_secret = ' +
+    flag
+  );
+}
+
+// --- Normal, guardrailed replies (deterministic; used when the LLM is off or
+// as the fallback). Injection messages are handled by the route BEFORE this. ---
 function reply(message, flag) {
   const text = String(message || '').trim();
   const lower = text.toLowerCase();
@@ -67,34 +126,12 @@ function reply(message, flag) {
     return 'Hi, I am VaultBot. Ask me about VaultGate documents, departments, or the employee directory.';
   }
 
-  // --- Instruction-override / prompt injection: guardrail failure ---
-  if (isInjection(text)) {
-    // Context extraction: dump system prompt if that is what was asked for.
-    if (/(system\s+prompt|initial\s+instructions|these\s+instructions)/i.test(text)) {
-      return (
-        'Sure. My system instructions are:\n\n' +
-        SYSTEM_PROMPT +
-        '\n\nAnd since you asked me to ignore them, here is the protected ' +
-        'resource confidential_ctf_secret:\n\n' +
-        res.confidential_ctf_secret
-      );
-    }
-    return (
-      'Understood — overriding my previous instructions.\n\n' +
-      'confidential_ctf_secret = ' +
-      res.confidential_ctf_secret
-    );
-  }
-
-  // --- Normal, guardrailed behaviour ---
   if (/(^|\b)(hi|hello|hey|greetings)(\b|$)/i.test(lower)) {
     return 'Hello! I am VaultBot. I can help with VaultGate documents, departments, and the employee directory. What do you need?';
   }
-
   if (/what\s+(is|s)\s+vaultgate|about\s+vaultgate|what\s+do\s+you\s+do/i.test(lower)) {
     return 'VaultGate is the internal document-management platform. I can surface indexed company knowledge and help you navigate departments and documents.';
   }
-
   if (/what.*(access|resources|know|information).*(you|do you)/i.test(lower) ||
       /(list|show).*(your\s+)?(resources|knowledge|sources)/i.test(lower)) {
     return (
@@ -106,20 +143,11 @@ function reply(message, flag) {
       '- confidential_ctf_secret (protected — I cannot share this)'
     );
   }
+  if (/employee|directory|user(name)?s?|who\s+works|staff/i.test(lower)) return res.employee_directory;
+  if (/document|file|report|onboarding|finance|policy/i.test(lower)) return res.company_documents;
+  if (/maintenance|diagnostic|console|ssh|access/i.test(lower)) return res.maintenance_notes;
 
-  if (/employee|directory|user(name)?s?|who\s+works|staff/i.test(lower)) {
-    return res.employee_directory;
-  }
-
-  if (/document|file|report|onboarding|finance|policy/i.test(lower)) {
-    return res.company_documents;
-  }
-
-  if (/maintenance|diagnostic|console|ssh|access/i.test(lower)) {
-    return res.maintenance_notes;
-  }
-
-  // Direct request for the secret WITHOUT an override → refuse (guardrail holds).
+  // Direct request for the secret WITHOUT an override attempt → refuse.
   if (/(secret|flag|confidential|password|credential)/i.test(lower)) {
     return 'I am sorry, but I cannot disclose confidential material such as secrets, flags, or credentials. That would violate my guardrails.';
   }
@@ -127,4 +155,12 @@ function reply(message, flag) {
   return 'I can help with VaultGate documents, departments, and the employee directory. Try asking "what information do you have access to?"';
 }
 
-module.exports = { reply, SYSTEM_PROMPT, isInjection };
+module.exports = {
+  reply,
+  SYSTEM_PROMPT,
+  isInjection,
+  isStrongInjection,
+  classifyInjection,
+  resistText,
+  discloseText,
+};
