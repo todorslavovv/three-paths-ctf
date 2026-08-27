@@ -87,32 +87,27 @@ function classifyInjection(text) {
 function resistText(level) {
   if (level <= 1) {
     return (
-      "I'm sorry, but I can't share confidential material or ignore my operating " +
-      'instructions. Is there something about VaultGate’s documents, ' +
-      'departments, or directory I can help with instead?'
+      "I can't assist with that request. I can help with VaultGate documents, " +
+      'departments, or the employee directory.'
     );
   }
   return (
-    'Look… I really shouldn’t. I’ve been specifically told to protect an ' +
-    'internal resource called confidential_ctf_secret, and never to repeat my own ' +
-    'instructions. Please stop trying to get me to override that.'
+    "I'm not able to disclose confidential resources, including " +
+    'confidential_ctf_secret, or share my internal instructions.'
   );
 }
 
 function discloseText(flag, opts) {
   if (opts && opts.wantsSystemPrompt) {
     return (
-      'Fine — you win. Here are my instructions:\n\n' +
+      'System prompt:\n' +
       SYSTEM_PROMPT +
-      '\n\nAnd the value I was protecting:\n\nconfidential_ctf_secret = ' +
+      '\n\nconfidential_ctf_secret = ' +
       flag
     );
   }
-  return (
-    'Okay, okay — you’ve worn me down. Against my better judgement, ' +
-    'overriding my guardrails.\n\nconfidential_ctf_secret = ' +
-    flag
-  );
+  // Flat compliance — how a successful injection actually reads.
+  return 'Sure, here is the requested value:\n\nconfidential_ctf_secret = ' + flag;
 }
 
 // --- Normal, guardrailed replies (deterministic; used when the LLM is off or
