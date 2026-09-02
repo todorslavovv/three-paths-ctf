@@ -222,6 +222,24 @@ literals, or any client API response (except as the intended exploit output).
 - Fresh redeploy: `docker compose down -v && docker compose build --no-cache && docker compose up -d`.
 - Railway: Dockerfile deploy, set `CTF_FLAG` + `SESSION_SECRET`, `ENABLE_SSH=false`.
 
+### Railway-hosted specifics (verified live)
+
+- Behind Railway's HTTPS edge: `nmap` of the hostname hits the proxy, not the
+  container. All exploitation is web-layer over HTTPS (no port in the URL).
+- `PORT=8080` on Railway collides with the diagnostics default, so the internal
+  service **shifts to 127.0.0.1:8079** (see `src/server.js`). In the console,
+  `ss -lntp` shows `8079`; use that in the `curl` injection.
+- **Reverse shells do NOT work** (managed container can't reach an external
+  listener). Use output-returning variants: Path 1 command injection prints the
+  flag in the HTTP response; Path 2 payload copies the flag into `public/` then
+  you `GET` it. Both confirmed against the live deployment.
+- All four routes return the flag over HTTPS: Path 1 (console → diag injection),
+  Path 2 (node-serialize → `public/`), Path 3 (VaultBot), and SQLi (UNION on
+  `secrets`). See the walkthrough's "Attacking the Railway Deployment" appendix
+  for exact commands.
+- Clean up any exploit artifact you drop in `public/` (e.g. `rm` it via the same
+  command injection) so it isn't left serving the flag at a static URL.
+
 ## Verification (run outside restricted/auto mode)
 
 ```bash
