@@ -17,6 +17,11 @@ Recon → Enumeration → Information Gathering → Vulnerability Identification
 Difficulty: **Beginner → Intermediate**. There is **one flag**, reachable by
 **three independent paths** (plus a bonus SQL-injection route).
 
+📖 **Full walkthrough on Medium:**
+[Hacking VaultGate: Three Paths to One Flag](https://medium.com/@todorslavovv/hacking-vaultgate-three-paths-to-one-flag-000000000000)
+<!-- TODO: replace the URL above with the real Medium link after publishing -->
+*(Placeholder link — will be updated once the article is published.)*
+
 ---
 
 ## Features

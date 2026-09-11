@@ -13,3 +13,6 @@ docs/*.fdb_latexmk
 
 # local Claude Code settings
 .claude/
+
+# Medium article working folder — published on Medium, not part of the repo
+Medium article/
