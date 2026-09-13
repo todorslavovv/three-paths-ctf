@@ -18,7 +18,7 @@ Difficulty: **Beginner → Intermediate**. There is **one flag**, reachable by
 **three independent paths** (plus a bonus SQL-injection route).
 
 📖 **Full walkthrough on Medium:**
-[Hacking VaultGate: Three Paths to One Flag](https://medium.com/@todorslavovv/hacking-vaultgate-three-paths-to-one-flag-ff9b53a3db2e)
+_(walkthrough being revised — link coming soon)_
 
 ---
 
