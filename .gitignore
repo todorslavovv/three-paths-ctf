@@ -11,7 +11,7 @@ docs/*.fdb_latexmk
 *.tmp
 .DS_Store
 
-# local Claude Code settings
+# local agent/editor settings
 .claude/
 
 # Medium article working folder — published on Medium, not part of the repo

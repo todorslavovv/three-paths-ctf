@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # VaultGate — one-shot verification. Run in a normal terminal (or a fresh
-# Claude Code session in default permission mode):
+# automated session in default permission mode):
 #
 #     bash verify.sh            # app + tests + LaTeX
 #     bash verify.sh --docker   # also build & smoke-test the Docker image
